@@ -40,4 +40,11 @@ impl User {
             .fetch_optional(pool)
             .await
     }
+
+    pub async fn find_by_username(username: &str, pool: &sqlx::PgPool) -> Result<Option<Self>, sqlx::Error>{
+    	sqlx::query_as::<_, User>("SELECT id, username, email, password_hash, created_at FROM users WHERE username = $1")
+    		.bind(username)
+ 			.fetch_optional(pool)
+ 			.await
+    } 
 }
