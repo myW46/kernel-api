@@ -1,26 +1,22 @@
-use axum::{
-	extract::State,
-	http::StatusCode,
-	Json,
-};
+use axum::{extract::State, http::StatusCode, Json};
 
-use serde::{Deserialize,Serialize};
-use sqlx::PgPool;
-use crate::models::user::User;
 use crate::auth::password;
 use crate::error::AppError;
+use crate::models::user::User;
+use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
-	pub username: String,
-	pub email: String,
-	pub password: String,
+    pub username: String,
+    pub email: String,
+    pub password: String,
 }
 #[derive(Serialize)]
 pub struct AuthResponse {
-	pub id: uuid::Uuid,
-	pub username: String,
-	pub email: String,
+    pub id: uuid::Uuid,
+    pub username: String,
+    pub email: String,
 }
 
 pub async fn register(
@@ -31,16 +27,13 @@ pub async fn register(
     let hashed_password = password::hash(&payload.password)?;
 
     // 2. Создаем пользователя в БД через метод модели
-    let user = User::create(
-        &payload.username, 
-        &payload.email, 
-        &hashed_password, 
-        &pool
-    ).await.map_err(|e| {
-        // Если ошибка БД (например, email уже занят), возвращаем ошибку
-        // Здесь можно добавить логику проверки уникальности
-        AppError::DbError(e)
-    })?;
+    let user = User::create(&payload.username, &payload.email, &hashed_password, &pool)
+        .await
+        .map_err(|e| {
+            // Если ошибка БД (например, email уже занят), возвращаем ошибку
+            // Здесь можно добавить логику проверки уникальности
+            AppError::DbError(e)
+        })?;
 
     // 3. Формируем ответ без пароля
     let response = AuthResponse {

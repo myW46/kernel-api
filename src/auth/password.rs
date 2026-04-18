@@ -1,19 +1,19 @@
 use argon2::{
-	password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-	Argon2,
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
 };
 
 use crate::error::AppError;
 
-pub fn hash(password: &str)-> Result<String,AppError>{
-	let salt = SaltString::generate(&mut OsRng);
-	let argon2 = Argon2::default();
+pub fn hash(password: &str) -> Result<String, AppError> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
 
-	let password_hash = argon2
-		.hash_password(password.as_bytes(), &salt)
-		.map_err(|_| AppError::InternalError)?
-		.to_string();
-	Ok(password_hash)
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|_| AppError::InternalError)?
+        .to_string();
+    Ok(password_hash)
 }
 
 pub fn verify(password: &str, hash: &str) -> bool {
@@ -21,7 +21,7 @@ pub fn verify(password: &str, hash: &str) -> bool {
         Ok(h) => h,
         Err(_) => return false,
     };
-    
+
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
