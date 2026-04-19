@@ -4,7 +4,8 @@ use crate::auth::password;
 use crate::error::AppError;
 use crate::models::user::User;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, error::DatabaseError};
+use tracing::info;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -18,6 +19,19 @@ pub struct AuthResponse {
     pub username: String,
     pub email: String,
 }
+
+#[derive(Deserialize)]
+pub struct LoginRequest{
+    pub  email: String,
+    pub password: String,
+}
+
+#[derive(Serialize)]
+pub struct LoginResponse{
+    pub id: uuid::Uuid,
+    pub token: String,
+}
+
 
 pub async fn register(
     State(pool): State<PgPool>,
@@ -34,7 +48,7 @@ pub async fn register(
             // Здесь можно добавить логику проверки уникальности
             AppError::DbError(e)
         })?;
-
+    info!("New user registered: {} (ID: {})", user.username, user.id); 
     // 3. Формируем ответ без пароля
     let response = AuthResponse {
         id: user.id,
@@ -43,4 +57,29 @@ pub async fn register(
     };
 
     Ok((StatusCode::CREATED, Json(response)))
+}
+
+pub async fn login(
+    State(pool): State<PgPool>,
+    Json(payload): Json<LoginRequest>,
+) -> Result<(StatusCode, Json<LoginResponse>), AppError> { 
+
+    let user: User= User::find_by_email(&payload.email, &pool)
+        .await
+        .map_err(|e| AppError::DbError(e))?
+        .ok_or(AppError::Unauthorized)?;
+
+    let is_valide = password::verify(&payload.password, &user.password_hash);
+    if !is_valide{
+        return Err(AppError::Unauthorized);
+    }
+    info!("User logged in: {} (ID: {})", user.username, user.id);
+    let token = crate::auth::jwt::sign(user.id)?;
+    let response = LoginResponse{
+        id:user.id,
+        token: token,
+    };
+    
+    Ok((StatusCode::OK, Json(response)))
+
 }
